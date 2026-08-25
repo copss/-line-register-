@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ลงทะเบียนรับใบแจ้งหนี้</title>
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: -apple-system, sans-serif; padding: 24px; max-width: 420px; margin: 0 auto; }
+    h2 { font-size: 18px; }
+    input { width: 100%; padding: 12px; font-size: 16px; box-sizing: border-box;
+            border: 1px solid #ccc; border-radius: 8px; margin-top: 8px; }
+    button { width: 100%; padding: 14px; font-size: 16px; margin-top: 16px;
+             background: #06C755; color: #fff; border: none; border-radius: 8px; }
+    button:disabled { background: #aaa; }
+    #status { margin-top: 16px; font-size: 14px; }
+    #profile { font-size: 14px; color: #555; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h2>ลงทะเบียนรับใบแจ้งหนี้ทาง LINE</h2>
+  <div id="profile">กำลังโหลดข้อมูล...</div>
+
+  <label>เลขที่ห้อง</label>
+  <input type="text" id="roomNo" placeholder="เช่น 101" inputmode="numeric">
+
+  <button id="submitBtn" onclick="submitForm()">ลงทะเบียน</button>
+  <div id="status"></div>
+
+  <script>
+    // ==== แก้ 2 ค่านี้ ====
+    const LIFF_ID = "2011235923-6vRXa030";                 // จาก LINE Developers Console > LIFF tab
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxa2lWja3FmlCpcnsC9Jdj6NAuRnG_qeCQ82vS-Gz-USeaeOzBYQfBTww8tg8Y0zsJORQ/exec"; // URL ของ Apps Script Web App (.../exec) ที่มี doPost
+
+    // โหมดทดสอบ: เปิดหน้านี้ด้วย ?test=1 ต่อท้าย URL เพื่อข้ามการเช็ค LIFF จริง
+    const isTestMode = new URLSearchParams(window.location.search).get('test') === '1';
+    let currentUserId = null;
+    let currentName = null;
+
+    async function init() {
+      if (isTestMode) {
+        currentUserId = "TEST_USER_" + Date.now();
+        currentName = "ทดสอบระบบ";
+        document.getElementById('profile').innerText =
+          "[โหมดทดสอบ] userId: " + currentUserId;
+        return;
+      }
+      try {
+        await liff.init({ liffId: LIFF_ID });
+        if (!liff.isLoggedIn()) {
+          liff.login();
+          return;
+        }
+        const profile = await liff.getProfile();
+        currentUserId = profile.userId;
+        currentName = profile.displayName;
+        document.getElementById('profile').innerText = "บัญชี LINE: " + currentName;
+      } catch (err) {
+        document.getElementById('profile').innerText =
+          "DEBUG ERROR: " + (err && err.message ? err.message : JSON.stringify(err));
+        document.getElementById('submitBtn').disabled = true;
+      }
+    }
+
+    function submitForm() {
+      const roomNo = document.getElementById('roomNo').value.trim();
+      const statusEl = document.getElementById('status');
+
+      if (!roomNo) { statusEl.innerText = "กรุณากรอกเลขที่ห้อง"; return; }
+      if (!currentUserId) { statusEl.innerText = "ยังไม่พร้อม กรุณารอสักครู่แล้วลองใหม่"; return; }
+
+      document.getElementById('submitBtn').disabled = true;
+      statusEl.innerText = "กำลังบันทึก...";
+
+      fetch(APPS_SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" }, // ใช้ text/plain กัน CORS preflight ไม่ผ่าน
+        body: JSON.stringify({ userId: currentUserId, lineName: currentName, roomNo: roomNo })
+      })
+        .then(res => res.json())
+        .then(result => {
+          if (result.success) {
+            statusEl.innerText = "✅ ลงทะเบียนสำเร็จ ห้อง " + roomNo;
+          } else {
+            statusEl.innerText = "❌ " + result.message;
+            document.getElementById('submitBtn').disabled = false;
+          }
+        })
+        .catch(err => {
+          statusEl.innerText = "❌ เกิดข้อผิดพลาด: " + err.message;
+          document.getElementById('submitBtn').disabled = false;
+        });
+    }
+
+    init();
+  </script>
+</body>
+</html>
