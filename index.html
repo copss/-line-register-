@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ลงทะเบียนรับใบแจ้งหนี้</title>
+  <title>ลงทะเบียนรับเอกสาร</title>
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     body { font-family: -apple-system, sans-serif; padding: 24px; max-width: 420px; margin: 0 auto; }
@@ -18,7 +18,7 @@
   </style>
 </head>
 <body>
-  <h2>ลงทะเบียนรับใบแจ้งหนี้ทาง LINE</h2>
+  <h2>ลงทะเบียนรับเอกสารทาง LINE</h2>
   <div id="profile">กำลังโหลดข้อมูล...</div>
 
   <label>เลขที่ห้อง</label>
@@ -26,6 +26,9 @@
 
   <button id="submitBtn" onclick="submitForm()">ลงทะเบียน</button>
   <div id="status"></div>
+  <button id="closeBtn" onclick="closeLiffWindow()" style="display:none; background:#555; margin-top:10px;">
+    ปิดหน้าต่าง
+  </button>
 
   <script>
     // ==== แก้ 2 ค่านี้ ====
@@ -81,6 +84,7 @@
         .then(result => {
           if (result.success) {
             statusEl.innerText = "✅ ลงทะเบียนสำเร็จ ห้อง " + roomNo;
+            document.getElementById('closeBtn').style.display = 'block'; // แสดงปุ่มปิด
           } else {
             statusEl.innerText = "❌ " + result.message;
             document.getElementById('submitBtn').disabled = false;
@@ -90,6 +94,14 @@
           statusEl.innerText = "❌ เกิดข้อผิดพลาด: " + err.message;
           document.getElementById('submitBtn').disabled = false;
         });
+    }
+
+    function closeLiffWindow() {
+      if (isTestMode) {
+        alert('โหมดทดสอบ: ปุ่มนี้จะปิดหน้าต่างจริงเมื่อเปิดผ่านแอป LINE เท่านั้น');
+        return;
+      }
+      liff.closeWindow(); // ใช้งานได้เฉพาะตอนเปิดผ่านแอป LINE เท่านั้น ไม่มีผลถ้าเปิดในเบราว์เซอร์ปกติ
     }
 
     init();
